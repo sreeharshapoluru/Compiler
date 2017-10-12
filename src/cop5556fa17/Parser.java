@@ -201,20 +201,21 @@ public class Parser {
 			match(Kind.COMMA);
 			ySize = expression();
 			match(Kind.RSQUARE);
+			
 		}
 		else{
-			return new Declaration_Image(firstToken, xSize, ySize, name, source);
+			;
 		}
+		name = t;
 		match(Kind.IDENTIFIER);
 		if(t.kind == Kind.OP_LARROW){
-			name = t;
 			match(OP_LARROW);
 			source = source();
-			return new Declaration_Image(firstToken, xSize, ySize, name, source);
 		}
 		else{
-			return new Declaration_Image(firstToken, xSize, ySize, name, source);
+			;
 		}
+		return new Declaration_Image(firstToken, xSize, ySize, name, source);
 	}
 
 	
@@ -296,7 +297,7 @@ public class Parser {
 	 * 
 	 * @throws SyntaxException
 	 */
-	Expression expression() throws SyntaxException {
+	public Expression expression() throws SyntaxException {
 		Token firstToken = t;
 		Expression condition =orexpression();
 		if(t.kind == Kind.OP_Q){
@@ -454,14 +455,15 @@ public class Parser {
 	// UnaryExpression ::= OP_PLUS UnaryExpression | OP_MINUS UnaryExpression | UnaryExpressionNotPlusMinus
 	Expression unaryexpression() throws SyntaxException {
 		Token firstToken = t;
+		Token op = null;
 		if(t.kind == Kind.OP_PLUS){
-			Token op = t;
+			op = t;
 			match(Kind.OP_PLUS);
 			Expression e =unaryexpression();
 			return new Expression_Unary(firstToken, op, e);
 		}
 		else if(t.kind == Kind.OP_MINUS){
-			Token op = t;
+			op = t;
 			match(Kind.OP_MINUS);
 			Expression e = unaryexpression();
 			return new Expression_Unary(firstToken, op, e);
@@ -566,7 +568,7 @@ public class Parser {
 	Expression primary() throws SyntaxException {
 		Token firstToken = t;
 		if(t.kind == Kind.INTEGER_LITERAL){
-			Expression e = new Expression_IntLit(firstToken, Integer.parseInt(t.toString()));
+			Expression e = new Expression_IntLit(firstToken, t.intVal());
 			match(Kind.INTEGER_LITERAL);
 			return e;
 		}
@@ -582,7 +584,7 @@ public class Parser {
 			return e;
 		}
 		else if(t.kind == Kind.BOOLEAN_LITERAL){
-			Expression e = new Expression_BooleanLit(firstToken, Boolean.parseBoolean(t.toString()));
+			Expression e = new Expression_BooleanLit(firstToken, t.getText().equals("true"));
 			match(Kind.BOOLEAN_LITERAL);
 			return e;
 		}
