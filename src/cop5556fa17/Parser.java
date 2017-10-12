@@ -150,7 +150,7 @@ public class Parser {
 		if(t.kind == Kind.STRING_LITERAL){
 			Token fileOrUrl = t;
 			match(Kind.STRING_LITERAL);
-			return new Source_StringLiteral(firstToken, fileOrUrl.toString());
+			return new Source_StringLiteral(firstToken, fileOrUrl.getText());
 		}
 		else if(t.kind == Kind.OP_AT){
 			match(Kind.OP_AT);
@@ -244,7 +244,7 @@ public class Parser {
 	// ImageOutStatement ::= IDENTIFIER OP_RARROW Sink
 	Statement_Out imageoutstatement(Token sentToken) throws SyntaxException {
 		Token firstToken =sentToken;
-		Token name = t;
+		Token name = firstToken;
 		match(Kind.OP_RARROW);
 		Sink sink = sink();
 		return new Statement_Out(firstToken, name, sink);
