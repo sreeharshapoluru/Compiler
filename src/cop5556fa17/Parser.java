@@ -272,7 +272,7 @@ public class Parser {
 	// ImageInStatement ::= OP_LARROW Source
 	Statement_In imageinstatement(Token sentToken) throws SyntaxException {
 		Token firstToken = sentToken;
-		Token name =t;
+		Token name =firstToken;
 		match(Kind.OP_LARROW);
 		Source source = source();
 		return new Statement_In(firstToken, name, source);
@@ -308,7 +308,7 @@ public class Parser {
 			return new Expression_Conditional(firstToken, condition, trueExpression, falseExpression);
 		}
 		else{
-			return new Expression_Conditional(firstToken, condition, null, null);
+			return condition;
 		}
 			
 	}
