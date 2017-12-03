@@ -1,21 +1,12 @@
 package cop5556fa17;
 
+import java.net.URL;
 import java.util.HashMap;
-
 import java.util.Map;
-
-import javax.lang.model.SourceVersion;
-
-import org.junit.runner.manipulation.Sortable;
-
-import com.sun.glass.ui.DelayedCallback;
-import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
-import com.sun.org.glassfish.external.arc.Stability;
-import com.sun.xml.internal.ws.api.model.ExceptionType;
 
 import cop5556fa17.Scanner.Kind;
 import cop5556fa17.Scanner.Token;
-import cop5556fa17.TypeUtils.Type; 
+import cop5556fa17.TypeUtils.Type;
 import cop5556fa17.AST.ASTNode;
 import cop5556fa17.AST.ASTVisitor;
 import cop5556fa17.AST.Declaration;
@@ -43,7 +34,6 @@ import cop5556fa17.AST.Source_StringLiteral;
 import cop5556fa17.AST.Statement_Assign;
 import cop5556fa17.AST.Statement_In;
 import cop5556fa17.AST.Statement_Out;
-import java.net.*;
 
 public class TypeCheckVisitor implements ASTVisitor {
 	
@@ -121,7 +111,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 			Object arg) throws Exception {
 		expression_Binary.e0.visit(this, arg);
 		expression_Binary.e1.visit(this, arg);
-		
 		if(expression_Binary.op == Kind.OP_EQ || expression_Binary.op == Kind.OP_NEQ){
 			expression_Binary.typeName = Type.BOOLEAN;
 		}
@@ -298,8 +287,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 		else {
 			source_StringLiteral.typeName = Type.FILE;
 		}
-		
-		
 		return source_StringLiteral.typeName;
 	}
 
@@ -390,7 +377,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 			Object arg) throws Exception {
 		expression_FunctionAppWithIndexArg.arg.visit(this, arg);
 		expression_FunctionAppWithIndexArg.typeName = Type.INTEGER;
-		
 		return expression_FunctionAppWithIndexArg.typeName;
 	}
 
@@ -441,12 +427,12 @@ public class TypeCheckVisitor implements ASTVisitor {
 		statement_In.source.visit(this, arg);
 		if(symbolTable.containsKey(statement_In.name)) {
 			statement_In.setDec((Declaration)symbolTable.get(statement_In.name));
-			if((Declaration)symbolTable.get(statement_In.name) != null && symbolTable.get(statement_In.name).typeName == statement_In.source.typeName){
+			/*if((Declaration)symbolTable.get(statement_In.name) != null && symbolTable.get(statement_In.name).typeName == statement_In.source.typeName){
 				;
 			}
 			else {
 				throw new SemanticException(statement_In.firstToken, "The declaration of name is null or type of name is not same as the type of source");
-			}
+			}*/
 		}
 		else {
 			throw new SemanticException(statement_In.firstToken, "Name is not in the symbol table. Trying to access variable that is not declared");
@@ -467,8 +453,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 			throw new SemanticException(statement_Assign.firstToken, "lhs type and expression types are not same");
 		}
 		statement_Assign.setCartesian(statement_Assign.lhs.isCartesian());
-		
-	    
 		return statement_Assign.typeName;
 	}
 
@@ -523,7 +507,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 			throws Exception {
 		expression_BooleanLit.typeName = Type.BOOLEAN;
 		return expression_BooleanLit.typeName;
-		
 	}
 
 	@Override
@@ -531,8 +514,6 @@ public class TypeCheckVisitor implements ASTVisitor {
 			Object arg) throws Exception {
 		if(symbolTable.containsKey(expression_Ident.name)){
 			expression_Ident.typeName = ((Declaration)symbolTable.get(expression_Ident.name)).typeName;
-			
-			
 		}
 		else {
 			throw new SemanticException(expression_Ident.firstToken, "Name is not in the symbol table. Trying to access variable that is not declared");

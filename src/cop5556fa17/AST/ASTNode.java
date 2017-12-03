@@ -6,6 +6,10 @@ import cop5556fa17.TypeUtils.Type;
 public abstract class ASTNode {
 	public Type typeName;
 	
+	public Type getType() {
+		return this.typeName;
+	}
+	
 	
 	final public Token firstToken;
 	
