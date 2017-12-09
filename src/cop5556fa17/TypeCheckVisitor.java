@@ -295,8 +295,8 @@ public class TypeCheckVisitor implements ASTVisitor {
 			Source_CommandLineParam source_CommandLineParam, Object arg)
 			throws Exception {
 		source_CommandLineParam.paramNum.visit(this, arg);
-		source_CommandLineParam.typeName = source_CommandLineParam.paramNum.typeName;
-		if(source_CommandLineParam.typeName == Type.INTEGER) {
+		source_CommandLineParam.typeName =null;
+		if(source_CommandLineParam.paramNum.typeName == Type.INTEGER) {
 			;
 		}
 		else {
@@ -340,7 +340,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 			
 		}
 		declaration_SourceSink.typeName = TypeUtils.getType(declaration_SourceSink.type);
-		if(declaration_SourceSink.source.typeName == declaration_SourceSink.typeName) {
+		if(declaration_SourceSink.source.typeName == declaration_SourceSink.typeName || declaration_SourceSink.source.typeName == null) {
 			;
 		}
 		else {
@@ -450,7 +450,13 @@ public class TypeCheckVisitor implements ASTVisitor {
 		;
 		}
 		else {
+			if(statement_Assign.lhs.typeName == Type.IMAGE && statement_Assign.e.typeName == Type.INTEGER) {
+				;
+			}
+			else {
+				
 			throw new SemanticException(statement_Assign.firstToken, "lhs type and expression types are not same");
+			}
 		}
 		statement_Assign.setCartesian(statement_Assign.lhs.isCartesian());
 		return statement_Assign.typeName;

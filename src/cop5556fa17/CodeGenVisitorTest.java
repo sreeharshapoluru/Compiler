@@ -1,8 +1,10 @@
 package cop5556fa17;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
+import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 
@@ -10,12 +12,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import cop5556fa17.AST.Program;
 import cop5556fa17.CodeGenUtils.DynamicClassLoader;
-import cop5556fa17.Parser.SyntaxException;
-import cop5556fa17.TypeCheckVisitor.SemanticException;
+import cop5556fa17.AST.Program;
 
-public class CodeGenVisitorTest {
+public class CodeGenVisitorTest implements ImageResources{
 	
 	static boolean doPrint = true;
 	static boolean doCreateFile = false;
@@ -28,9 +28,13 @@ public class CodeGenVisitorTest {
 
 	@Rule
 	public ExpectedException thrown = ExpectedException.none();
-	private boolean devel = true;
+	private boolean devel = false;
 	private boolean grade = true;
 	
+
+	public static final int Z = 0xFFFFFF;
+	
+
 	
 	/**
 	 * Generates bytecode for given input.
@@ -92,28 +96,108 @@ public class CodeGenVisitorTest {
 		m.invoke(null, passedArgs);	
 	}
 	
-
+	
+	/** Delays for 5 seconds.
+	 * May be useful during development to delay closing frames displaying images 
+     */
+	void sleepFor5() throws Exception {
+		Thread.sleep(5000);
+	}
+	
+	/** Blocks program until a key is pressed to the console.
+	 * May be useful during development to delay closing frames displaying images
+	 */
+	void waitForKey() throws IOException {
+		System.out.println("enter any char to exit");
+		int b = System.in.read();	
+	}
+	
+	/**
+	 * Used in most test cases.  Change once here to change behavior in all tests.
+	 * 
+	 * @throws Exception
+	 */
+	void keepFrame() throws Exception {
+		sleepFor5();
+	}
+	
+	
 	@Test
+	/**
+	 * Empty program.  Test updated for new logging instructions.
+	 * @throws Exception
+	 */
 	public void emptyProg() throws Exception {
 		String prog = "emptyProg";	
 		String input = prog;
 		byte[] bytecode = genCode(input);
 		String[] commandLineArgs = {};
 		runCode(prog, bytecode, commandLineArgs);
-		show("Log:\n "+RuntimeLog.globalLog);
-		assertEquals("entering main;leaving main;",RuntimeLog.globalLog.toString());
+		assertEquals("",RuntimeLog.globalLog.toString());
 	}
 	
 	
 	@Test
+	/** The program in our language creates and displays a 512 x 512 image
+	 * with all red pixels.  Then it compares that to an image created 
+	 * by ImageSupport.makeConstantImage.
+	 * 
+	 * @throws Exception
+	 */
+	public void imageGenRed() throws Exception{
+		devel = false;
+		grade = true;
+		String prog = "imageGenRed";
+		String input = prog
+				+ "\nimage[512,512] g; \n"
+				+ "g[[x,y]] = 16711680;"
+				+ "g -> SCREEN;\n"
+				;
+		byte[] bytecode = genCode(input);		
+		String[] commandLineArgs = {}; 
+		runCode(prog, bytecode, commandLineArgs);		
+		BufferedImage imageRef = ImageSupport.makeConstantImage(0xFF0000, 512, 512);
+		BufferedImage image = RuntimeLog.globalImageLog.get(0);
+		ImageSupport.compareImages(imageRef, image);
+		keepFrame();	
+	}
+
+	@Test
+	/**
+	 * Creates a default-sized green image.
+	 * @throws Exception
+	 */
+	public void imageGenGreen() throws Exception{
+		devel = false;
+		grade = true;
+		String prog = "imageGenGreen";
+		String input = prog
+				+ "\nimage g; \n"
+				+ "g[[x,y]] = 65280;"
+				+ "g -> SCREEN;\n"
+				;
+		byte[] bytecode = genCode(input);		
+		String[] commandLineArgs = {}; 
+		runCode(prog, bytecode, commandLineArgs);		
+		BufferedImage imageRef = ImageSupport.makeConstantImage(0xFF0000, 256, 256);
+		BufferedImage image = RuntimeLog.globalImageLog.get(0);
+		ImageSupport.compareImages(imageRef, image);
+		keepFrame();
+	}
+	
+	@Test
+	/** This is the same test case as before, but the assert statement has been updated to reflect the new instructions
+	 * for where to put log statements in assignment 6.
+	 * 
+	 * @throws Exception
+	 */
 	public void prog1() throws Exception {
 		String prog = "prog1";
 		String input = prog + "\nint g;\ng = 3;\ng -> SCREEN; ";	
 		byte[] bytecode = genCode(input);		
 		String[] commandLineArgs = {}; //create command line argument array to initialize params, none in this case		
 		runCode(prog, bytecode, commandLineArgs);	
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;3;3;leaving main;",RuntimeLog.globalLog.toString());
+		assertEquals("3;",RuntimeLog.globalLog.toString());
 	}
 	
 	@Test
@@ -124,8 +208,7 @@ public class CodeGenVisitorTest {
 		byte[] bytecode = genCode(input);		
 		String[] commandLineArgs = {}; //create command line argument array to initialize params, none in this case		
 		runCode(prog, bytecode, commandLineArgs);
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;true;true;false;false;leaving main;",RuntimeLog.globalLog.toString() );
+		assertEquals("true;false;",RuntimeLog.globalLog.toString() );
 	}
 	
 	@Test
@@ -138,12 +221,11 @@ public class CodeGenVisitorTest {
 				+ "g -> SCREEN;\n"
 				+ "int h;\n"
 				+ "h <- @ 1;\n"
-				+ "h -> SCREEN;";
+				+ "h -> SCREEN;";	
 		byte[] bytecode = genCode(input);		
 		String[] commandLineArgs = {"true", "55"}; //create command line argument array to initialize params, none in this case		
 		runCode(prog, bytecode, commandLineArgs);	
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;0;true;1;55;leaving main;",RuntimeLog.globalLog.toString());
+		assertEquals("true;55;",RuntimeLog.globalLog.toString());
 	}
 	
 	@Test
@@ -168,191 +250,244 @@ public class CodeGenVisitorTest {
 		byte[] bytecode = genCode(input);		
 		String[] commandLineArgs = {"true", "34", "56"}; //create command line argument array to initialize params, none in this case		
 		runCode(prog, bytecode, commandLineArgs);	
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;0;true;1;34;2;56;true;34;34;leaving main;",RuntimeLog.globalLog.toString());
+		assertEquals("true;34;56;34;",RuntimeLog.globalLog.toString());
 	}
 	
+
+	@Test
+	//  reads an image from the filename passed as command line argument and displays it.
+	//  Compares the image output (and logged) from our language and compares with the same image read directly from the file.
+	public void image1() throws Exception{
+		String prog = "image1";
+		String input = prog 
+				+ "\nimage g; \n"
+				+ "g <- @ 0;\n"
+				+ "g -> SCREEN;\n"
+				;
+		byte[] bytecode = genCode(input);		
+		String[] commandLineArgs = {imageFile1}; 
+		runCode(prog, bytecode, commandLineArgs);	
+		BufferedImage refImage0 = ImageSupport.readFromFile(imageFile1);
+		BufferedImage loggedImage0 = RuntimeLog.globalImageLog.get(0);
+		assertTrue(ImageSupport.compareImages(refImage0, loggedImage0 ));
+		keepFrame();	
+	}
+	
+
 	
 	@Test
-	public void unaryExpr() throws Exception {
-		String prog = "unaryExpr";
-		String input = prog + 
-				"\nboolean g = false;\n" +
-				"g -> SCREEN;\n" +
-				"g = !g;\n"
-				+ "g -> SCREEN;";
-		show(input);
+	/** reads and resizes image with filename taken from command line
+	 * 
+	 * @throws Exception
+	 */
+	public void image2() throws Exception{
+		devel = false;
+		grade = true;
+		String prog = "image2";
+		String input = prog 
+				+ "\nimage[128,128] g; \n"
+				+ "g <- @ 0;\n"
+				+ "g -> SCREEN;\n"
+				;
+		byte[] bytecode = genCode(input);		
+		String[] commandLineArgs = {imageFile1}; 
+		runCode(prog, bytecode, commandLineArgs);		
+		
+		BufferedImage refImage0 = ImageSupport.readImage(imageFile1, 128, 128);
+		BufferedImage loggedImage0 = RuntimeLog.globalImageLog.get(0);
+		assertTrue(ImageSupport.compareImages(refImage0,loggedImage0));
+		keepFrame();
+	}
+	
+
+	
+	@Test
+	public void imageGen3() throws Exception{
+		devel = false;
+		grade = true;
+		String prog = "imageGen3";
+		String input = prog
+				+ "\nimage[1024,512] g; \n"
+				+ "g[[x,y]] = x*y;"
+				+ "g -> SCREEN;\n"
+				;
+		byte[] bytecode = genCode(input);		
+		String[] commandLineArgs = {}; 
+		runCode(prog, bytecode, commandLineArgs);	
+
+		BufferedImage loggedImage = RuntimeLog.globalImageLog.get(0);
+		for(int y = 0; y < 512; y++) {
+			for (int x = 0; x < 1024; x++) {
+				int pixelRef = x*y; 
+				int pixel = ImageSupport.getPixel(loggedImage, x,y);
+				assertEquals(pixelRef, pixel);
+			}
+		}
+		keepFrame();
+	}
+	
+	@Test
+	public void imageGen4() throws Exception{
+		devel = false;
+		grade = true;
+		String prog = "imageGen4";
+		String input = prog
+				+ "\nimage[1024,1024] g; \n"
+				+ "g[[r,a]] = r;"
+				+ "g -> SCREEN;\n"
+				;
+		byte[] bytecode = genCode(input);		
+		String[] commandLineArgs = {}; 
+		runCode(prog, bytecode, commandLineArgs);	
+		
+		BufferedImage loggedImage = RuntimeLog.globalImageLog.get(0);
+		for(int y = 0; y < 1024; y++) {
+			for (int x = 0; x < 1024; x++) {
+				int pixelRef = RuntimeFunctions.polar_r(x, y); 
+				int pixel = ImageSupport.getPixel(loggedImage, x,y);
+				assertEquals(pixelRef, pixel);
+			}
+		}
+		keepFrame();
+		
+	}
+	
+
+	
+	@Test
+	public void imageCopy() throws Exception{
+		devel = false;
+		grade = true;
+		String prog = "imageCopy";
+		String input = prog 
+				+ "\nimage[1024,1024] g; \n"
+				+ "\nimage[1024,1024] h; \n"
+				+ "g <- @ 0;\n"
+				+ "g -> SCREEN;\n"
+				+ "h[[x,y]] =  g[x,y];\n"
+				+ "h -> SCREEN; \n"
+				;
+		byte[] bytecode = genCode(input);		
+		String[] commandLineArgs = {imageFile1}; 
+		runCode(prog, bytecode, commandLineArgs);		
+	
+		BufferedImage loggedImage0 = RuntimeLog.globalImageLog.get(0);
+		BufferedImage loggedImage1 = RuntimeLog.globalImageLog.get(1);
+		assertTrue(ImageSupport.compareImages(loggedImage0,loggedImage1));	
+		
+		keepFrame();
+	}
+	
+
+	
+	@Test
+	/**
+	 * Create a grid with white lines and black background.
+	 * @throws Exception
+	 */
+	public void imageGen7() throws Exception{
+		devel = false;
+		grade = true;
+		String prog = "imageGen7";
+		String input = prog
+				+ "\nimage[512,512] g; \n"
+				+ "g[[x,y]] = (x%20>1)?(y%20>1)? 0 : Z : Z;"
+				+ "g -> SCREEN;\n"
+				;
 		byte[] bytecode = genCode(input);		
 		String[] commandLineArgs = {}; 
 		runCode(prog, bytecode, commandLineArgs);		
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;false;false;false;true;true;leaving main;",RuntimeLog.globalLog.toString());
-										
+		
+		BufferedImage loggedImage = RuntimeLog.globalImageLog.get(0);
+		for(int y = 0; y < 512; y++) {
+			for (int x = 0; x < 512; x++) {
+				int pixelRef = (x%20>1)?(y%20>1)? 0 : Z : Z; 
+				int pixel = ImageSupport.getPixel(loggedImage, x,y);
+				assertEquals(pixelRef, pixel);
+			}
+		}
+		keepFrame();
 	}
 	
-	@Test
-	public void testcase1() throws Exception {
-		String prog = "testcase1";
-		String input = prog + 
-				"\n boolean t;\n" + 
-				"int n;\n" + 
-				"int abcd;\n" + 
-				"abcd <- @ 0;\n" + 
-				"n <- @ 1;\n" + 
-				"t <- @ 2;\n" + 
-				"boolean s=((abcd+n)>-56 & t);\n" + 
-				"s -> SCREEN;";
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {"1","-55","true"}; 
-		runCode(prog, bytecode, commandLineArgs);		
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;0;1;2;1;-55;-54;56;-56;true;true;true;true;leaving main;",RuntimeLog.globalLog.toString());								
+
+@Test
+public void checkConstants() throws Exception{
+	String prog = "checkConstants";
+	String input = prog + " \n"
+			+"int z = Z; z -> SCREEN;\n"
+			+"int def_X = DEF_X; def_X -> SCREEN;\n"
+			+"int def_Y = DEF_Y; def_Y -> SCREEN;\n"
+			;
+	byte[] bytecode = genCode(input);		
+	String[] commandLineArgs = {}; 
+	runCode(prog, bytecode, commandLineArgs);	
+	System.out.println("Z=" + 0xFFFFFF);
+	assertEquals(Z + ";256;256;", RuntimeLog.getGlobalString());
+}
+
+@Test
+public void failedTest() throws Exception{
+	//args: <imageURL>\nimage g; \ng[[r,a]] = cart_x[r,a]; \ng -> SCREEN;\n"
+	String prog = "imagePreDef";
+	String input = prog + " \n"
+			+"image g;"
+			+"\ng[[r,a]] = cart_x[r,a];"
+			+"\ng -> SCREEN;\n"
+			;
+	byte[] bytecode = genCode(input);		
+	String[] commandLineArgs = {}; 
+	runCode(prog, bytecode, commandLineArgs);	
+	BufferedImage refImage0 = ImageSupport.readFromFile(imageFile1);
+	BufferedImage loggedImage0 = RuntimeLog.globalImageLog.get(0);
+	for(int y = 0; y < 256; y++) {
+		for (int x = 0; x < 256; x++) {
+			int r = RuntimeFunctions.polar_r(x, y);
+			int a = RuntimeFunctions.polar_a(x, y);
+			int cartx = RuntimeFunctions.cart_x(r, a);
+			int pixelRef = cartx; 
+			//System.out.println(cartx);
+		//	System.out.println("****");
+			int pixel = ImageSupport.getPixel(loggedImage0, x,y);
+			//System.out.println(pixel);
+			assertEquals(pixelRef, pixel);
+		}
+		
 	}
+	//assertTrue(ImageSupport.compareImages(refImage0, loggedImage0 ));
+	keepFrame();	
+}
+/*@Test
+public void image6() throws Exception {
+	devel = false;
+	grade = true;
+	String prog = "image6";
+	String input = prog 
+			+ "\nimage[1024,1024] g; "
+			+ "\n\nimage[1024,1024] h; "
+			+ "\ng <- @ 0;"
+			+ "\ng -> SCREEN;"
+			+ "\nh[[x,y]] = ! g[x,y];"
+			+ "h -> SCREEN; "
+			+ "\n\nimage[1024,1024] average; "
+			+ "\naverage[[x,y]] = h[x,y]*3;"
+			+ "average -> SCREEN; \n";
 	
-	@Test
-	public void testcase2() throws Exception {
-		String prog = "testcase2";
-		String input = prog + 
-				"\n boolean t;\n" + 
-				"int n=1;\n" + 
-				"int abcd=1;\n" + 
-				"int z=5;\n" + 
-				"boolean s=((n<0) & (z>1) | (z+n<=2) & (abcd+n>=5) | (z==5) | (z*n!=10) & (abcd-n==0) & (z/5==1) | (z%5==0) );\n" + 
-				"s -> SCREEN;";
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {}; 
-		runCode(prog, bytecode, commandLineArgs);		
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;1;1;5;1;0;false;5;1;true;false;5;1;6;2;false;1;1;2;5;false;false;false;5;5;true;true;5;1;5;10;true;1;1;0;0;true;true;5;5;1;1;true;true;true;5;5;0;0;true;true;true;leaving main;",RuntimeLog.globalLog.toString());
-										
-	}
+	byte[] bytecode = genCode(input);
+	String[] commandLineArgs = { imageFile1};
+	runCode(prog, bytecode, commandLineArgs);
+
+	BufferedImage loggedImage0 = RuntimeLog.globalImageLog.get(0);
+	BufferedImage loggedImage1 = RuntimeLog.globalImageLog.get(2);
 	
-	@Test
-	public void testcase3() throws Exception {
-		String prog = "testcase3";
-		String input = prog + 
-				"\n boolean s=(!true & !false);\n" + 
-				"s -> SCREEN;";
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {}; 
-		runCode(prog, bytecode, commandLineArgs);		
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;true;false;false;true;false;false;leaving main;",RuntimeLog.globalLog.toString());
-										
-	}
-	
-	@Test
-	public void testcase4() throws Exception {
-		String prog = "testcase4";
-		String input = prog + 
-				"\n int s=!1;\n" + 
-				"s -> SCREEN;";
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {"55","2"}; 
-		runCode(prog, bytecode, commandLineArgs);		
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;1;2147483646;2147483646;leaving main;",RuntimeLog.globalLog.toString());
-										
-	}
-	
-	@Test
-	public void testcase5() throws Exception {
-		String prog = "testcase5";
-		String input = prog + 
-				"\n int s=!1;\n" + 
-				"s -> SCREEN;";
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {}; 
-		runCode(prog, bytecode, commandLineArgs);		
-		show("Log:\n"+RuntimeLog.globalLog);
-		assertEquals("entering main;1;2147483646;2147483646;leaving main;",RuntimeLog.globalLog.toString());
-										
-	}
-	
-	@Test
-	public void testcase6() throws Exception {
-		String prog = "testcase6";
-		String input = prog + 
-				"\n boolean t;\n" + 
-				"int n; \n"+
-				"n<- @ 1;\n" + 
-				"int abcd;\n"+
-				"abcd <- @ 2;\n" + 
-				"int z=5;\n" + 
-				"boolean s=(!n & !false);\n" + 
-				"s -> SCREEN;";
-		thrown.expect(SemanticException.class);
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {"55","true"}; 
-		runCode(prog, bytecode, commandLineArgs);
-		show("Log:\n"+RuntimeLog.globalLog);
-										
-	}
-	
-	@Test
-	public void testcase7() throws Exception {
-		String prog = "testcase7";
-		String input = prog + 
-				" \n boolean n=true;\n" + 
-				"int abcd=1;\n" + 
-				"int z=5;\n" + 
-				"boolean s=((n<0) & (z>1));\n" + 
-				"s -> SCREEN; ";
-		thrown.expect(SemanticException.class);
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {}; 
-		runCode(prog, bytecode, commandLineArgs);
-		show("Log:\n"+RuntimeLog.globalLog);							
-	}
-	
-	@Test
-	public void testcase8() throws Exception {
-		String prog = "testcase8";
-		String input = prog + 
-				" \n boolean s=((false<=true) & (true>=false) ); \n" + 
-				"s -> SCREEN; ";
-		thrown.expect(SemanticException.class);
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {}; 
-		runCode(prog, bytecode, commandLineArgs);
-		show("Log:\n"+RuntimeLog.globalLog);							
-	}
-	
-	@Test
-	public void testcase9() throws Exception {
-		String prog = "testcase9";
-		String input = prog + 
-				" \n boolean s=(true?:); \n" + 
-				"s -> SCREEN; ";
-		thrown.expect(SyntaxException.class);
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {}; 
-		runCode(prog, bytecode, commandLineArgs);
-		show("Log:\n"+RuntimeLog.globalLog);							
-	}
-	
-	@Test
-	public void testcase10() throws Exception {
-		String prog = "testcase10";
-		String input = prog + 
-				" \n boolean s=(true?:false); \n" + 
-				"s -> SCREEN; ";
-		thrown.expect(SyntaxException.class);
-		show(input);
-		byte[] bytecode = genCode(input);		
-		String[] commandLineArgs = {}; 
-		runCode(prog, bytecode, commandLineArgs);
-		show("Log:\n"+RuntimeLog.globalLog);							
+	for (int y = 0; y < 1024; y++) {
+		for (int x = 0; x < 1024; x++) {
+			int pixel0 = 0x00FFFFFF ^ ImageSupport.getPixel(loggedImage0, x, y);
+			int pixel1 = ImageSupport.getPixel(loggedImage1, x, y);
+			assertEquals(pixel0*3, pixel1);
+		}
 	}
 
+	keepFrame();
+}*/
 
 }

@@ -734,7 +734,7 @@ public class Parser {
 		match(Kind.KW_r);
 		match(Kind.COMMA);
 		e1 = new Expression_PredefinedName(firstToken, t.kind);
-		match(Kind.KW_A);
+		match(Kind.KW_a);
 		return new Index(firstToken,e0,e1);
 		
 		//throw new UnsupportedOperationException();
